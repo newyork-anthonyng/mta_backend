@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const config = require('./config');
 const Mta = require('mta-gtfs');
+const six = require('./data/06');
 
 router.get('/all_stops', (req, res) => {
 	const mta = createNewMta();
-
 	mta.stop().then((result) => {
 		const filteredResult = filterAllStopsData(result);
 
@@ -41,52 +41,22 @@ router.get('/test', (req, res) => {
 
 router.get('/schedule', (req, res) => {
 	const mta = createNewMta();
+	const allPromises = [];
+	const allSchedules = [];
+	stops = six;
 
-	mta.stop().then((stops) => {
-		const allPromises = [];
-		const allSchedules = [];
-		stops = {
-			635: {
-				stop_id: "635",
-				stop_name: "14 St - Union Sq",
-				stop_lat: "40.734673",
-				stop_lon: "-73.989951"
-			},
-			636: {
-				stop_id: "636",
-				stop_name: "Astor Pl",
-				stop_lat: "40.730054",
-				stop_lon: "-73.99107"
-			}
-		};
-
-		for(let stop in stops) {
-			if(stops.hasOwnProperty(stop)) {
-				const currentPromise = mta.schedule(Number(stop)).then((result) => {
-					if(result.hasOwnProperty('schedule')) {
-						for(let direction in result['schedule'][stop]) {
-							let currentTrains = result['schedule'][stop][direction];
-
-							currentTrains.forEach((train) => {
-								delete train['departureTime'];
-								train['direction'] = direction;
-								train['stop_name'] = stops[stop]['stop_name'];
-							});
-
-							allSchedules.push(currentTrains);
-						}
-					}
-				});
-
-				allPromises.push(currentPromise);
-			}
-		}
-
-		Promise.all(allPromises).then(values => {
-			res.json({
-				SUCCESS: true,
-				result: allSchedules
+	for(let i = 0; i < stops.length; i++) {
+		if(isValidStop(stops[i])) {
+			const currentPromise = mta.schedule(+stops[i]).then((result) => {
+				allSchedules.push(result);
 			});
+			allPromises.push(currentPromise);
+		}
+	}
+	Promise.all(allPromises).then(values => {
+		res.json({
+			SUCCESS: true,
+			result: allSchedules
 		});
 	});
 });
@@ -133,6 +103,10 @@ function filterOutStatus(data, status) {
 	const filteredData = data.filter((ele) => ele.status !== status);
 
 	return filteredData;
+}
+
+function isValidStop(stop) {
+	return !isNaN(+stop);
 }
 
 module.exports = router;
