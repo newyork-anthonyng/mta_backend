@@ -13,11 +13,10 @@ const getStopsByTrainName = (trainName, cb) => {
 		}
 
 		sheet[0].getRows({}, (err, rows) => {
-			const allStops = rows.map((row) => {
-				return {
-					stop_id: row.stopid,
-					stop_name: row.stopname
-				};
+			const allStops = {};
+
+			rows.forEach((row) => {
+				allStops[row.stopid] = row.stopname;
 			});
 
 			cb(allStops);
